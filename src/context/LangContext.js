@@ -8,7 +8,11 @@ export const useLang = () => useContext(Ctx);
 export function LangProvider({ children }) {
   const [lang, setLang] = useState(() => {
     try {
-      return localStorage.getItem("emrs_lang") || "en";
+      const saved = localStorage.getItem("emrs_lang");
+      if (saved) return saved;
+      const browserLang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+      if (browserLang.startsWith("ar")) return "ar";
+      return "en";
     } catch { return "en"; }
   });
 

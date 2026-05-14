@@ -316,3 +316,13 @@ html[dir="rtl"] .phone-num {
 .cap-bar, .bf, .bt { direction: ltr !important; }
 html[dir="rtl"] thead th { text-align: right; }
 
+@keyframes sosPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 8px 32px rgba(220,38,38,0.4); 
+  }
+  50% { 
+    transform: scale(1.05); 
+    box-shadow: 0 12px 48px rgba(220,38,38,0.7); 
+  }
+}

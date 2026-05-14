@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import Layout from "../components/Layout";
 
-const SB = s => ({Pending:"b-amber",Accepted:"b-green","In Progress":"b-blue",Completed:"b-green",Rejected:"b-red",Cancelled:"b-gray"}[s]||"b-gray");
+const SB = s => ({Pending:"b-amber",Accepted:"b-green","In Progress":"b-blue",Completed:"b-green",Rejected:"b-red",Cancelled:"b-gray","Ambulance Dispatched":"b-red"}[s]||"b-gray");
 
 export default function Requests() {
   const { effectiveRole } = useAuth();
@@ -73,7 +73,8 @@ export default function Requests() {
   const FILTERS = ["All","Pending","Accepted","In Progress","Completed","Rejected","Cancelled"];
   const filterLabel = f => ({
     All:t("all"), Pending:t("pending"), Accepted:t("accepted"), "In Progress":t("inProgress"),
-    Completed:t("completed"), Rejected:t("rejected"), Cancelled:t("cancelled")
+    Completed:t("completed"), Rejected:t("rejected"), Cancelled:t("cancelled"),
+    "Ambulance Dispatched":t("ambulanceDispatched")
   }[f] || f);
   const stLabel = s => filterLabel(s);
   const stHospLabel = s => s==="Open"?t("open"):s==="Moderate"?t("moderate"):t("overloaded");

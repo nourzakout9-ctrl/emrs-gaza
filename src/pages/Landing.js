@@ -27,6 +27,7 @@ export default function Landing() {
   const [loading,     setLoading]     = useState(false);
   const [recommended, setRecommended] = useState(null);
   const [submitted,   setSubmitted]   = useState(null);
+  const [sosLoading,  setSosLoading]  = useState(false);
   const [seeding,     setSeeding]     = useState(true);
 
   useEffect(() => {
@@ -96,6 +97,52 @@ export default function Landing() {
       setError(t("submitFailed"));
     }
     setLoading(false);
+  }
+
+  // ── SOS EMERGENCY ──────────────────────
+  async function handleSOS() {
+    if (!navigator.geolocation) {
+      alert(lang==="ar" ? "متصفحك لا يدعم تحديد الموقع" : "Your browser doesn't support geolocation");
+      return;
+    }
+    setSosLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const locationStr = `GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        try {
+          const sosData = {
+            patientName: lang==="ar" ? "⚠️ حالة SOS — مجهولة الحالة" : "⚠️ SOS — Unknown Condition",
+            phone: "SOS - No phone provided",
+            location: locationStr,
+            locationAr: locationStr,
+            emergencyType: "Critical / Unknown",
+            emergencyTypeAr: "حالة حرجة / غير معروفة",
+            priority: "High",
+            description: lang==="ar" 
+              ? "🚨 طلب SOS عاجل! المريض ضغط زر الطوارئ ولم يستطع تقديم تفاصيل. الحالة غير معروفة وقد تكون حرجة. يجب إرسال سيارة إسعاف فوراً إلى الموقع المحدد عبر GPS."
+              : "🚨 URGENT SOS! Patient pressed emergency button but couldn't provide details. Condition unknown, potentially critical. AMBULANCE MUST BE DISPATCHED IMMEDIATELY to the GPS location.",
+            submittedBy: "citizen-sos",
+            isSOS: true,
+            status: "Ambulance Dispatched"
+          };
+          const ref = await submitRequest(sosData, hospitals);
+          const best = recommendHospital(hospitals, "Other", locationStr);
+          setView("citizen");
+          setSubmitted({ id: ref.id, hospital: best });
+        } catch {
+          alert(lang==="ar" ? "فشل الإرسال" : "Failed to submit");
+        }
+        setSosLoading(false);
+      },
+      (err) => {
+        setSosLoading(false);
+        alert(lang==="ar" 
+          ? "يجب السماح بالوصول للموقع لاستخدام هذه الميزة"
+          : "Location access required for this feature");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   }
 
   const TEAM = [
@@ -369,6 +416,31 @@ export default function Landing() {
           <span className="red">{t("titleLine2")}</span>
         </h1>
         <p className="land-sub">{t("landingSub")}</p>
+
+        {/* SOS BUTTON */}
+        <div style={{textAlign:"center", marginBottom:36}}>
+          <button onClick={handleSOS} disabled={sosLoading || seeding}
+            style={{
+              background:"linear-gradient(135deg, #DC2626, #991B1B)",
+              color:"white", border:"none", padding:"20px 44px",
+              fontSize:17, fontWeight:800, borderRadius:14, cursor:"pointer",
+              boxShadow:"0 8px 32px rgba(220,38,38,0.4)",
+              fontFamily:"'Inter','Cairo',sans-serif",
+              animation:"sosPulse 1.4s infinite",
+              display:"inline-flex", alignItems:"center", gap:11,
+              letterSpacing:".02em"
+            }}>
+            <span style={{fontSize:22}}>🚨</span>
+            {sosLoading 
+              ? (lang==="ar" ? "جاري إرسال موقعك..." : "Sending your location...") 
+              : (lang==="ar" ? "اتصال طوارئ فوري" : "Call Emergency Immediately")}
+          </button>
+          <div style={{fontSize:12.5, color:"var(--g500)", marginTop:10, maxWidth:420, margin:"10px auto 0"}}>
+            {lang==="ar" 
+              ? "اضغط هنا فوراً إذا كنت في حالة حرجة ولا تستطيع تقديم تفاصيل"
+              : "Press here immediately if you're in a critical condition and can't provide details"}
+          </div>
+        </div>
 
         <div className="actor-grid">
           <div className="ac ac-citizen" onClick={openCitizen}>

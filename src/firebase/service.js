@@ -13,21 +13,50 @@ const ZONES = {
   farsouth: ["rafah","tal al sultan","rafah crossing","brazil","al-shaboura","رفح","تل السلطان","الشابورة"],
 };
 const HOSPITAL_ZONES = {
-  "Al-Shifa Medical Complex":"gaza","Al-Quds Hospital":"gaza","Al-Ahli Hospital":"gaza","Al-Durra Pediatric Hospital":"gaza",
-  "Shuhada Al-Aqsa Hospital":"central","Al-Aqsa Martyrs Hospital":"central",
-  "Nasser Medical Center":"south","European Gaza Hospital":"south",
+  "Al-Shifa Medical Complex":"gaza","Al-Quds Hospital":"gaza","Al-Ahli Arab Hospital":"gaza","Al-Durra Pediatric Hospital":"gaza",
+  "Shuhada Al-Aqsa Hospital":"central","Al-Awda Hospital - Nuseirat":"central",
+  "Nasser Medical Complex":"south","European Gaza Hospital":"south",
   "Abu Yousef Al-Najjar Hospital":"farsouth",
-  "Kamal Edwan Hospital":"north","Al-Awda Hospital":"north","Indonesian Hospital":"north",
+  "Kamal Adwan Hospital":"north","Al-Awda Hospital - Jabalia":"north","Indonesian Hospital":"north",
 };
 
-export function detectZone(addr) {
-  if (!addr) return null;
-  const s = addr.toLowerCase();
-  for (const [z, kws] of Object.entries(ZONES)) {
-    if (kws.some(k => s.includes(k.toLowerCase()))) return z;
+const ZONE_GPS = {
+  north:    { lat: 31.532, lng: 34.493 },
+  gaza:     { lat: 31.500, lng: 34.466 },
+  central:  { lat: 31.413, lng: 34.350 },
+  south:    { lat: 31.346, lng: 34.306 },
+  farsouth: { lat: 31.286, lng: 34.247 },
+};
+
+function gpsDistance(lat1, lng1, lat2, lng2) {
+  const dLat = lat1 - lat2;
+  const dLng = lng1 - lng2;
+  return Math.sqrt(dLat*dLat + dLng*dLng);
+}
+
+export function detectZone(address) {
+  if (!address) return null;
+  if (address.startsWith("GPS:")) {
+    const match = address.match(/GPS:\s*([\-\d.]+),\s*([\-\d.]+)/);
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      let closest = null;
+      let minDist = Infinity;
+      for (const [zone, coords] of Object.entries(ZONE_GPS)) {
+        const d = gpsDistance(lat, lng, coords.lat, coords.lng);
+        if (d < minDist) { minDist = d; closest = zone; }
+      }
+      return closest;
+    }
+  }
+  const lower = address.toLowerCase();
+  for (const [zone, kws] of Object.entries(ZONES)) {
+    if (kws.some(k => lower.includes(k))) return zone;
   }
   return null;
 }
+
 function zd(z1, z2) {
   const o = ["north","gaza","central","south","farsouth"];
   const i1 = o.indexOf(z1), i2 = o.indexOf(z2);
@@ -49,12 +78,14 @@ function scoreOne(h, type, addr) {
   const r  = h.responseRate || 0.8;
   return 0.40*a + 0.35*p + 0.20*t + 0.05*r;
 }
+
 export function recommendHospital(hospitals, type, addr) {
   const av = hospitals.filter(h => h.status !== "Overloaded" && h.availableBeds > 0);
   const pool = av.length ? av : hospitals.filter(h => h.availableBeds > 0);
   if (!pool.length) return hospitals[0];
   return pool.map(h => ({...h, score: scoreOne(h, type, addr)})).sort((a,b)=>b.score-a.score)[0];
 }
+
 export function getTopHospitals(hospitals, type, addr) {
   const av = hospitals.filter(h => h.status !== "Overloaded" && h.availableBeds > 0);
   const pool = av.length ? av : hospitals.filter(h => h.availableBeds > 0);
@@ -63,25 +94,32 @@ export function getTopHospitals(hospitals, type, addr) {
 }
 
 export async function seedAll() {
+  // ── HOSPITALS ──
   const hSnap = await getDocs(collection(db, "hospitals"));
-  if (hSnap.empty) {
-    const hospitals = [
-      { name:"Al-Shifa Medical Complex",      nameAr:"مجمع الشفاء الطبي",            zone:"gaza",     location:"Rimal, Gaza City",         locationAr:"الرمال، مدينة غزة",      status:"Overloaded", availableBeds:8,  emergencyCapacity:500, staff:60, specialties:"Cardiac, Trauma, Neurology, Surgery, Pediatric, Orthopedics", specialtiesAr:"قلب، إصابات، أعصاب، جراحة، أطفال، عظام", contact:"+970-8-282-8282", responseRate:0.88 },
-      { name:"Al-Quds Hospital",              nameAr:"مستشفى القدس",                 zone:"gaza",     location:"Tel Al Hawa, Gaza City",   locationAr:"تل الهوا، مدينة غزة",     status:"Moderate",   availableBeds:22, emergencyCapacity:150, staff:20, specialties:"General, Surgery, Trauma, Orthopedics",                        specialtiesAr:"عام، جراحة، إصابات، عظام",                  contact:"+970-8-282-0820", responseRate:0.82 },
-      { name:"Al-Ahli Hospital",              nameAr:"المستشفى الأهلي",              zone:"gaza",     location:"Nasser Street, Gaza City", locationAr:"شارع النصر، مدينة غزة",   status:"Open",       availableBeds:35, emergencyCapacity:120, staff:18, specialties:"Internal Medicine, Cardiac, Respiratory",                      specialtiesAr:"باطنة، قلب، تنفسي",                          contact:"+970-8-282-8510", responseRate:0.85 },
-      { name:"Al-Durra Pediatric Hospital",   nameAr:"مستشفى الدرة للأطفال",          zone:"gaza",     location:"Sabra, Gaza City",         locationAr:"الصبرة، مدينة غزة",        status:"Open",       availableBeds:28, emergencyCapacity:100, staff:15, specialties:"Pediatric, Neonatal, Pediatric Surgery",                       specialtiesAr:"أطفال، حديثي الولادة، جراحة أطفال",         contact:"+970-8-282-8820", responseRate:0.87 },
-      { name:"Shuhada Al-Aqsa Hospital",      nameAr:"مستشفى شهداء الأقصى",          zone:"central",  location:"Nuseirat, Central Gaza",   locationAr:"النصيرات، المنطقة الوسطى", status:"Open",       availableBeds:40, emergencyCapacity:130, staff:22, specialties:"Trauma, Surgery, Cardiac, Internal Medicine",                  specialtiesAr:"إصابات، جراحة، قلب، باطنة",                  contact:"+970-8-253-3950", responseRate:0.84 },
-      { name:"Al-Aqsa Martyrs Hospital",      nameAr:"مستشفى شهداء الأقصى الميداني", zone:"central",  location:"Deir Al-Balah",            locationAr:"دير البلح",                 status:"Moderate",   availableBeds:18, emergencyCapacity:80,  staff:12, specialties:"Trauma, Fracture, Orthopedics, Surgery",                       specialtiesAr:"إصابات، كسور، عظام، جراحة",                  contact:"+970-8-253-5333", responseRate:0.79 },
-      { name:"Nasser Medical Center",         nameAr:"مجمع ناصر الطبي",              zone:"south",    location:"Khan Younis",              locationAr:"خان يونس",                  status:"Open",       availableBeds:45, emergencyCapacity:200, staff:30, specialties:"Trauma, Surgery, Cardiac, Pediatric, Respiratory",             specialtiesAr:"إصابات، جراحة، قلب، أطفال، تنفسي",          contact:"+970-8-205-0006", responseRate:0.88 },
-      { name:"European Gaza Hospital",        nameAr:"المستشفى الأوروبي",             zone:"south",    location:"Khan Younis",              locationAr:"خان يونس",                  status:"Moderate",   availableBeds:20, emergencyCapacity:150, staff:18, specialties:"Burns, Surgery, Orthopedics, Trauma",                          specialtiesAr:"حروق، جراحة، عظام، إصابات",                  contact:"+970-8-205-2555", responseRate:0.85 },
-      { name:"Abu Yousef Al-Najjar Hospital", nameAr:"مستشفى أبو يوسف النجار",       zone:"farsouth", location:"Rafah",                    locationAr:"رفح",                       status:"Open",       availableBeds:30, emergencyCapacity:100, staff:14, specialties:"General, Trauma, Surgery, Internal Medicine",                  specialtiesAr:"عام، إصابات، جراحة، باطنة",                  contact:"+970-8-213-2366", responseRate:0.80 },
-      { name:"Kamal Edwan Hospital",          nameAr:"مستشفى كمال عدوان",            zone:"north",    location:"Beit Lahia, North Gaza",   locationAr:"بيت لاهيا، شمال غزة",      status:"Moderate",   availableBeds:15, emergencyCapacity:120, staff:16, specialties:"General, Surgery, Trauma, Pediatric",                          specialtiesAr:"عام، جراحة، إصابات، أطفال",                  contact:"+970-8-282-5555", responseRate:0.75 },
-      { name:"Al-Awda Hospital",              nameAr:"مستشفى العودة",                zone:"north",    location:"Jabalia, North Gaza",      locationAr:"جباليا، شمال غزة",         status:"Open",       availableBeds:25, emergencyCapacity:90,  staff:12, specialties:"Cardiology, Neurology, Stroke, Internal Medicine",             specialtiesAr:"قلب، أعصاب، جلطات، باطنة",                   contact:"+970-8-282-9999", responseRate:0.82 },
-      { name:"Indonesian Hospital",           nameAr:"المستشفى الإندونيسي",           zone:"north",    location:"Beit Lahia, North Gaza",   locationAr:"بيت لاهيا، شمال غزة",      status:"Open",       availableBeds:20, emergencyCapacity:80,  staff:10, specialties:"General, Surgery, Pediatric, Respiratory",                     specialtiesAr:"عام، جراحة، أطفال، تنفسي",                   contact:"+970-8-282-7700", responseRate:0.78 },
-    ];
-    for (const h of hospitals) await addDoc(collection(db, "hospitals"), h);
+  const existingHospitalNames = hSnap.docs.map(d => d.data().name);
+
+  const hospitals = [
+    { name:"Al-Shifa Medical Complex",      nameAr:"مجمع الشفاء الطبي",            zone:"gaza",     location:"Rimal, Gaza City",         locationAr:"الرمال، مدينة غزة",         status:"Overloaded", availableBeds:8,  emergencyCapacity:500, staff:60, specialties:"Cardiac, Trauma, Neurology, Surgery, Pediatric, Orthopedics", specialtiesAr:"قلب، إصابات، أعصاب، جراحة، أطفال، عظام", contact:"+970-8-282-8282", responseRate:0.88 },
+    { name:"Al-Quds Hospital",              nameAr:"مستشفى القدس",                 zone:"gaza",     location:"Tel Al Hawa, Gaza City",   locationAr:"تل الهوا، مدينة غزة",        status:"Moderate",   availableBeds:22, emergencyCapacity:150, staff:20, specialties:"General, Surgery, Trauma, Orthopedics",                        specialtiesAr:"عام، جراحة، إصابات، عظام",                  contact:"+970-8-282-0820", responseRate:0.82 },
+    { name:"Al-Ahli Arab Hospital",         nameAr:"المستشفى الأهلي العربي",        zone:"gaza",     location:"Zeitoun, Gaza City",       locationAr:"الزيتون، مدينة غزة",         status:"Open",       availableBeds:35, emergencyCapacity:120, staff:18, specialties:"Internal Medicine, Cardiac, Respiratory",                      specialtiesAr:"باطنة، قلب، تنفسي",                          contact:"+970-8-282-8510", responseRate:0.85 },
+    { name:"Al-Durra Pediatric Hospital",   nameAr:"مستشفى الدرة للأطفال",          zone:"gaza",     location:"Sabra, Gaza City",         locationAr:"الصبرة، مدينة غزة",          status:"Open",       availableBeds:28, emergencyCapacity:100, staff:15, specialties:"Pediatric, Neonatal, Pediatric Surgery",                       specialtiesAr:"أطفال، حديثي الولادة، جراحة أطفال",         contact:"+970-8-282-8820", responseRate:0.87 },
+    { name:"Shuhada Al-Aqsa Hospital",      nameAr:"مستشفى شهداء الأقصى",          zone:"central",  location:"Deir Al-Balah, Central Gaza", locationAr:"دير البلح، المنطقة الوسطى", status:"Open",       availableBeds:40, emergencyCapacity:130, staff:22, specialties:"Trauma, Surgery, Cardiac, Internal Medicine",                  specialtiesAr:"إصابات، جراحة، قلب، باطنة",                  contact:"+970-8-253-3950", responseRate:0.84 },
+    { name:"Al-Awda Hospital - Nuseirat",   nameAr:"مستشفى العودة - النصيرات",      zone:"central",  location:"Nuseirat, Central Gaza",   locationAr:"النصيرات، المنطقة الوسطى",  status:"Moderate",   availableBeds:18, emergencyCapacity:80,  staff:12, specialties:"Trauma, Fracture, Orthopedics, Surgery",                       specialtiesAr:"إصابات، كسور، عظام، جراحة",                  contact:"+970-8-253-5333", responseRate:0.79 },
+    { name:"Nasser Medical Complex",        nameAr:"مجمع ناصر الطبي",              zone:"south",    location:"Khan Younis",              locationAr:"خان يونس",                   status:"Open",       availableBeds:45, emergencyCapacity:200, staff:30, specialties:"Trauma, Surgery, Cardiac, Pediatric, Respiratory",             specialtiesAr:"إصابات، جراحة، قلب، أطفال، تنفسي",          contact:"+970-8-205-0006", responseRate:0.88 },
+    { name:"European Gaza Hospital",        nameAr:"المستشفى الأوروبي بغزة",        zone:"south",    location:"Al-Fukhari, Khan Younis",  locationAr:"الفخاري، خان يونس",          status:"Moderate",   availableBeds:20, emergencyCapacity:150, staff:18, specialties:"Burns, Surgery, Orthopedics, Trauma",                          specialtiesAr:"حروق، جراحة، عظام، إصابات",                  contact:"+970-8-205-2555", responseRate:0.85 },
+    { name:"Abu Yousef Al-Najjar Hospital", nameAr:"مستشفى أبو يوسف النجار",       zone:"farsouth", location:"Rafah",                    locationAr:"رفح",                        status:"Open",       availableBeds:30, emergencyCapacity:100, staff:14, specialties:"General, Trauma, Surgery, Internal Medicine",                  specialtiesAr:"عام، إصابات، جراحة، باطنة",                  contact:"+970-8-213-2366", responseRate:0.80 },
+    { name:"Kamal Adwan Hospital",          nameAr:"مستشفى كمال عدوان",            zone:"north",    location:"Beit Lahia, North Gaza",   locationAr:"بيت لاهيا، شمال غزة",        status:"Moderate",   availableBeds:15, emergencyCapacity:120, staff:16, specialties:"General, Surgery, Trauma, Pediatric",                          specialtiesAr:"عام، جراحة، إصابات، أطفال",                  contact:"+970-8-282-5555", responseRate:0.75 },
+    { name:"Al-Awda Hospital - Jabalia",    nameAr:"مستشفى العودة - جباليا",        zone:"north",    location:"Jabalia, North Gaza",      locationAr:"جباليا، شمال غزة",          status:"Open",       availableBeds:25, emergencyCapacity:90,  staff:12, specialties:"Cardiology, Neurology, Stroke, Internal Medicine",             specialtiesAr:"قلب، أعصاب، جلطات، باطنة",                   contact:"+970-8-282-9999", responseRate:0.82 },
+    { name:"Indonesian Hospital",           nameAr:"المستشفى الإندونيسي",           zone:"north",    location:"Beit Lahia, North Gaza",   locationAr:"بيت لاهيا، شمال غزة",       status:"Open",       availableBeds:20, emergencyCapacity:80,  staff:10, specialties:"General, Surgery, Pediatric, Respiratory",                     specialtiesAr:"عام، جراحة، أطفال، تنفسي",                   contact:"+970-8-282-7700", responseRate:0.78 },
+  ];
+
+  for (const h of hospitals) {
+    if (!existingHospitalNames.includes(h.name)) {
+      await addDoc(collection(db, "hospitals"), h);
+    }
   }
 
+  // ── USERS ──
   const uSnap = await getDocs(collection(db, "users"));
   const existing = uSnap.docs.map(d => d.data().username);
   const users = [
@@ -126,16 +164,19 @@ export async function submitRequest(data, hospitals) {
     hospitalNameAr:    best?.nameAr    || "بانتظار التعيين",
     hospitalContact:   best?.contact   || "",
     locationAr:        data.locationAr || "",
-    status: "Pending",
+    status: data.status || "Pending",
     createdAt: serverTimestamp(),
     responseTime: null,
   });
 }
+
 export async function getAllRequests() {
   const q = query(collection(db,"requests"), orderBy("createdAt","desc"));
   return (await getDocs(q)).docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 export async function updateRequestStatus(id, status, extra={}) {
   await updateDoc(doc(db,"requests",id), { status, responseTime: serverTimestamp(), ...extra });
 }
+
 export async function deleteRequest(id) { await deleteDoc(doc(db,"requests",id)); }

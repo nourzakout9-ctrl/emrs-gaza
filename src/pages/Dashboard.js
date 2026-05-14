@@ -37,7 +37,8 @@ export default function Dashboard() {
 
   const stLabel = s => ({
     Pending:t("pending"), Accepted:t("accepted"), "In Progress":t("inProgress"),
-    Completed:t("completed"), Rejected:t("rejected"), Cancelled:t("cancelled")
+    Completed:t("completed"), Rejected:t("rejected"), Cancelled:t("cancelled"),
+    "Ambulance Dispatched":t("ambulanceDispatched")
   }[s] || s);
 
   const heroes = {
