@@ -326,3 +326,55 @@ html[dir="rtl"] thead th { text-align: right; }
     box-shadow: 0 12px 48px rgba(220,38,38,0.7); 
   }
 }
+/* ═══════════════════════════════════════
+   CUSTOM SCROLLBAR - أوضح وأجمل
+   ═══════════════════════════════════════ */
+
+/* Chrome, Safari, Edge */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  border-radius: 10px;
+  border: 2px solid #F1F5F9;
+  transition: all .2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #DC2626, #991B1B);
+  cursor: pointer;
+}
+
+::-webkit-scrollbar-corner {
+  background: #F1F5F9;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2563EB #F1F5F9;
+}
+
+/* Scrollbar داخل النوافذ المنبثقة (Modals) */
+.modal-body::-webkit-scrollbar,
+.modal::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #DC2626, #991B1B);
+}
+
+/* في وضع RTL */
+html[dir="rtl"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(225deg, #2563EB, #1D4ED8);
+}
