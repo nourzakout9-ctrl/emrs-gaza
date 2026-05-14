@@ -327,54 +327,37 @@ html[dir="rtl"] thead th { text-align: right; }
   }
 }
 /* ═══════════════════════════════════════
-   CUSTOM SCROLLBAR - أوضح وأجمل
+   CUSTOM SCROLLBAR - نحيف وأزرق فاتح
    ═══════════════════════════════════════ */
 
 /* Chrome, Safari, Edge */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #F8FAFC;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: #BAE6FD;
   border-radius: 10px;
-  border: 2px solid #F1F5F9;
-  transition: all .2s;
+  transition: background .2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #DC2626, #991B1B);
+  background: #7DD3FC;
   cursor: pointer;
 }
 
 ::-webkit-scrollbar-corner {
-  background: #F1F5F9;
+  background: #F8FAFC;
 }
 
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2563EB #F1F5F9;
-}
-
-/* Scrollbar داخل النوافذ المنبثقة (Modals) */
-.modal-body::-webkit-scrollbar,
-.modal::-webkit-scrollbar {
-  width: 10px;
-}
-
-.modal-body::-webkit-scrollbar-thumb,
-.modal::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #DC2626, #991B1B);
-}
-
-/* في وضع RTL */
-html[dir="rtl"] ::-webkit-scrollbar-thumb {
-  background: linear-gradient(225deg, #2563EB, #1D4ED8);
+  scrollbar-color: #BAE6FD #F8FAFC;
 }
