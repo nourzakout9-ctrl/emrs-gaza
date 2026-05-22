@@ -12,12 +12,56 @@ const ZONES = {
   south:    ["khan younis","khan yunis","abasan","bani suheila","al-qarara","south","خان يونس","عبسان","بني سهيلا","القرارة","الجنوب"],
   farsouth: ["rafah","tal al sultan","rafah crossing","brazil","al-shaboura","رفح","تل السلطان","الشابورة"],
 };
+
 const HOSPITAL_ZONES = {
   "Al-Shifa Medical Complex":"gaza","Al-Quds Hospital":"gaza","Al-Ahli Arab Hospital":"gaza","Al-Durra Pediatric Hospital":"gaza",
   "Shuhada Al-Aqsa Hospital":"central","Al-Awda Hospital - Nuseirat":"central",
   "Nasser Medical Complex":"south","European Gaza Hospital":"south",
   "Abu Yousef Al-Najjar Hospital":"farsouth",
   "Kamal Adwan Hospital":"north","Al-Awda Hospital - Jabalia":"north","Indonesian Hospital":"north",
+};
+
+// إحداثيات GPS الفعلية لكل مستشفى
+const HOSPITAL_GPS = {
+  "Al-Shifa Medical Complex":      { lat: 31.5240, lng: 34.4434 },
+  "Al-Quds Hospital":              { lat: 31.5071, lng: 34.4419 },
+  "Al-Ahli Arab Hospital":         { lat: 31.5034, lng: 34.4640 },
+  "Al-Durra Pediatric Hospital":   { lat: 31.5099, lng: 34.4498 },
+  "Shuhada Al-Aqsa Hospital":      { lat: 31.4180, lng: 34.3520 },
+  "Al-Awda Hospital - Nuseirat":   { lat: 31.4504, lng: 34.3920 },
+  "Nasser Medical Complex":        { lat: 31.3470, lng: 34.3060 },
+  "European Gaza Hospital":        { lat: 31.3010, lng: 34.2870 },
+  "Abu Yousef Al-Najjar Hospital": { lat: 31.2876, lng: 34.2510 },
+  "Kamal Adwan Hospital":          { lat: 31.5535, lng: 34.4960 },
+  "Al-Awda Hospital - Jabalia":    { lat: 31.5340, lng: 34.4830 },
+  "Indonesian Hospital":           { lat: 31.5510, lng: 34.5005 },
+};
+
+// إحداثيات GPS لكل منطقة سكنية
+const ZONE_TO_GPS_AREAS = {
+  "Rimal, Gaza City":          { lat: 31.5240, lng: 34.4434 },
+  "Tel Al Hawa, Gaza City":    { lat: 31.5071, lng: 34.4419 },
+  "Zeitoun, Gaza City":        { lat: 31.5034, lng: 34.4640 },
+  "Sabra, Gaza City":          { lat: 31.5099, lng: 34.4498 },
+  "Shejaia, Gaza City":        { lat: 31.5060, lng: 34.4730 },
+  "Sheikh Radwan, Gaza City":  { lat: 31.5295, lng: 34.4475 },
+  "Tuffah, Gaza City":         { lat: 31.5150, lng: 34.4670 },
+  "Daraj, Gaza City":          { lat: 31.5090, lng: 34.4585 },
+  "Beach Camp, Gaza City":     { lat: 31.5295, lng: 34.4360 },
+  "Jabalia, North Gaza":       { lat: 31.5340, lng: 34.4830 },
+  "Beit Lahia, North Gaza":    { lat: 31.5510, lng: 34.4960 },
+  "Beit Hanoun, North Gaza":   { lat: 31.5380, lng: 34.5350 },
+  "Nuseirat, Central Gaza":    { lat: 31.4504, lng: 34.3920 },
+  "Bureij, Central Gaza":      { lat: 31.4395, lng: 34.3700 },
+  "Maghazi, Central Gaza":     { lat: 31.4290, lng: 34.3760 },
+  "Deir Al-Balah, Central Gaza":{ lat: 31.4180, lng: 34.3520 },
+  "Khan Younis":               { lat: 31.3470, lng: 34.3060 },
+  "Abasan, Khan Younis":       { lat: 31.3320, lng: 34.3380 },
+  "Bani Suheila, Khan Younis": { lat: 31.3460, lng: 34.3270 },
+  "Al-Qarara, Khan Younis":    { lat: 31.3700, lng: 34.3200 },
+  "Rafah":                     { lat: 31.2876, lng: 34.2510 },
+  "Tal Al-Sultan, Rafah":      { lat: 31.2960, lng: 34.2300 },
+  "Al-Shaboura, Rafah":        { lat: 31.2840, lng: 34.2620 },
 };
 
 const ZONE_GPS = {
@@ -65,18 +109,50 @@ function zd(z1, z2) {
 }
 
 function scoreOne(h, type, addr) {
+  // درجة التوفّر (30%)
   const a = Math.min((h.availableBeds / (h.emergencyCapacity || 100)), 1);
-  const cz = detectZone(addr);
+  
+  // درجة القرب الفعلي (50%) - باستخدام GPS
   let p = 0.5;
-  if (cz) {
-    const hz = HOSPITAL_ZONES[h.name] || h.zone;
-    p = Math.max(0, 1 - (hz ? zd(cz, hz) : 2) * 0.3);
+  const hospGPS = HOSPITAL_GPS[h.name];
+  
+  if (hospGPS && addr) {
+    let userGPS = null;
+    
+    if (addr.startsWith("GPS:")) {
+      const match = addr.match(/GPS:\s*([\-\d.]+),\s*([\-\d.]+)/);
+      if (match) {
+        userGPS = { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+      }
+    } else if (ZONE_TO_GPS_AREAS[addr]) {
+      userGPS = ZONE_TO_GPS_AREAS[addr];
+    }
+    
+    if (userGPS) {
+      const dLat = (userGPS.lat - hospGPS.lat) * 111;
+      const dLng = (userGPS.lng - hospGPS.lng) * 111 * Math.cos(userGPS.lat * Math.PI / 180);
+      const distKm = Math.sqrt(dLat*dLat + dLng*dLng);
+      p = Math.max(0, 1 - (distKm / 25));
+    } else {
+      const cz = detectZone(addr);
+      if (cz) {
+        const hz = HOSPITAL_ZONES[h.name] || h.zone;
+        if (hz === cz) p = 0.9;
+        else p = Math.max(0, 1 - zd(cz, hz) * 0.35);
+      }
+    }
   }
+  
+  // درجة التخصص (15%)
   const sp = (h.specialties || "").toLowerCase();
   const tk = (type || "").toLowerCase().split(/[\s/]/)[0];
-  const t  = tk && sp.includes(tk) ? 1 : sp.includes("general") ? 0.5 : 0.3;
-  const r  = h.responseRate || 0.8;
-  return 0.40*a + 0.35*p + 0.20*t + 0.05*r;
+  const t = tk && sp.includes(tk) ? 1 : sp.includes("general") ? 0.5 : 0.3;
+  
+  // درجة الاستجابة (5%)
+  const r = h.responseRate || 0.8;
+  
+  // الأوزان: قرب 50% + توفّر 30% + تخصص 15% + استجابة 5%
+  return 0.50*p + 0.30*a + 0.15*t + 0.05*r;
 }
 
 export function recommendHospital(hospitals, type, addr) {
@@ -94,7 +170,6 @@ export function getTopHospitals(hospitals, type, addr) {
 }
 
 export async function seedAll() {
-  // ── HOSPITALS ──
   const hSnap = await getDocs(collection(db, "hospitals"));
   const existingHospitalNames = hSnap.docs.map(d => d.data().name);
 
@@ -119,7 +194,6 @@ export async function seedAll() {
     }
   }
 
-  // ── USERS ──
   const uSnap = await getDocs(collection(db, "users"));
   const existing = uSnap.docs.map(d => d.data().username);
   const users = [
@@ -180,3 +254,4 @@ export async function updateRequestStatus(id, status, extra={}) {
 }
 
 export async function deleteRequest(id) { await deleteDoc(doc(db,"requests",id)); }
+

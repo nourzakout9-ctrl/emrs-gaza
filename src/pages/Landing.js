@@ -29,7 +29,10 @@ export default function Landing() {
   const [submitted,   setSubmitted]   = useState(null);
   const [sosLoading,  setSosLoading]  = useState(false);
   const [seeding,     setSeeding]     = useState(true);
-
+  const [userLocation, setUserLocation] = useState(null);
+  const [userLocationName, setUserLocationName] = useState("");
+  const [errorPopup, setErrorPopup] = useState(null);
+  
   useEffect(() => {
     async function init() {
       await seedAll();
@@ -38,6 +41,51 @@ export default function Landing() {
     }
     init();
   }, []);
+
+  useEffect(() => {
+    if (view === "citizen" && !userLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserLocation(loc);
+          const AREAS = {
+            "Jabalia, North Gaza":     { lat: 31.5340, lng: 34.4830 },
+            "Beit Lahia, North Gaza":  { lat: 31.5510, lng: 34.4960 },
+            "Beit Hanoun, North Gaza": { lat: 31.5380, lng: 34.5350 },
+            "Rimal, Gaza City":        { lat: 31.5240, lng: 34.4434 },
+            "Tel Al Hawa, Gaza City":  { lat: 31.5071, lng: 34.4419 },
+            "Zeitoun, Gaza City":      { lat: 31.5034, lng: 34.4640 },
+            "Sabra, Gaza City":        { lat: 31.5099, lng: 34.4498 },
+            "Shejaia, Gaza City":      { lat: 31.5060, lng: 34.4730 },
+            "Sheikh Radwan, Gaza City":{ lat: 31.5295, lng: 34.4475 },
+            "Tuffah, Gaza City":       { lat: 31.5150, lng: 34.4670 },
+            "Daraj, Gaza City":        { lat: 31.5090, lng: 34.4585 },
+            "Beach Camp, Gaza City":   { lat: 31.5295, lng: 34.4360 },
+            "Nuseirat, Central Gaza":  { lat: 31.4504, lng: 34.3920 },
+            "Bureij, Central Gaza":    { lat: 31.4395, lng: 34.3700 },
+            "Maghazi, Central Gaza":   { lat: 31.4290, lng: 34.3760 },
+            "Deir Al-Balah, Central Gaza":{ lat: 31.4180, lng: 34.3520 },
+            "Khan Younis":             { lat: 31.3470, lng: 34.3060 },
+            "Abasan, Khan Younis":     { lat: 31.3320, lng: 34.3380 },
+            "Bani Suheila, Khan Younis":{ lat: 31.3460, lng: 34.3270 },
+            "Al-Qarara, Khan Younis":  { lat: 31.3700, lng: 34.3200 },
+            "Rafah":                   { lat: 31.2876, lng: 34.2510 },
+            "Tal Al-Sultan, Rafah":    { lat: 31.2960, lng: 34.2300 },
+            "Al-Shaboura, Rafah":      { lat: 31.2840, lng: 34.2620 },
+          };
+          let closest = "", minDist = Infinity;
+          for (const [name, c] of Object.entries(AREAS)) {
+            const d = Math.sqrt(Math.pow(loc.lat - c.lat, 2) + Math.pow(loc.lng - c.lng, 2));
+            if (d < minDist) { minDist = d; closest = name; }
+          }
+          setUserLocationName(closest);
+          setReqForm(prev => ({ ...prev, location: closest }));
+        },
+        (err) => console.log("Location denied:", err),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, [view, userLocation]);
 
   function openLogin(role) {
     setForm({ username:"", password:"" });
@@ -77,7 +125,27 @@ export default function Landing() {
   async function handleSubmitReq(e) {
     e.preventDefault();
     if (!reqForm.patientName || !reqForm.phone || !reqForm.location || !reqForm.emergencyType) {
-      setError(t("fillRequired")); return;
+      setErrorPopup({
+        title: lang==="ar" ? "حقول ناقصة" : "Missing Fields",
+        message: lang==="ar" ? "يرجى تعبئة جميع الحقول المطلوبة قبل الإرسال" : "Please fill all required fields before submitting"
+      });
+      return;
+    }
+    const phoneStr = reqForm.phone.trim();
+    const cleanPhone = phoneStr.replace(/\s/g, '');
+    const validFormats = 
+      /^\+970\d{9}$/.test(cleanPhone) ||
+      /^\+972\d{9}$/.test(cleanPhone) ||
+      /^05\d{8}$/.test(cleanPhone);
+    
+    if (!validFormats) {
+      setErrorPopup({
+        title: lang==="ar" ? "رقم هاتف غير صحيح" : "Invalid Phone Number",
+        message: lang==="ar" 
+          ? "الصيغ المقبولة هي:\n• +9705********\n• +9725********\n• 05********" 
+          : "Accepted formats:\n• +9705********\n• +9725********\n• 05********"
+      });
+      return;
     }
     setError(""); setLoading(true);
     try {
@@ -99,7 +167,6 @@ export default function Landing() {
     setLoading(false);
   }
 
-  // ── SOS EMERGENCY ──────────────────────
   async function handleSOS() {
     if (!navigator.geolocation) {
       alert(lang==="ar" ? "متصفحك لا يدعم تحديد الموقع" : "Your browser doesn't support geolocation");
@@ -120,8 +187,8 @@ export default function Landing() {
             emergencyTypeAr: "حالة حرجة / غير معروفة",
             priority: "High",
             description: lang==="ar" 
-              ? "🚨 طلب SOS عاجل! المريض ضغط زر الطوارئ ولم يستطع تقديم تفاصيل. الحالة غير معروفة وقد تكون حرجة. يجب إرسال سيارة إسعاف فوراً إلى الموقع المحدد عبر GPS."
-              : "🚨 URGENT SOS! Patient pressed emergency button but couldn't provide details. Condition unknown, potentially critical. AMBULANCE MUST BE DISPATCHED IMMEDIATELY to the GPS location.",
+              ? "🚨 طلب SOS عاجل! المريض ضغط زر الطوارئ ولم يستطع تقديم تفاصيل."
+              : "🚨 URGENT SOS! Patient pressed emergency button but couldn't provide details.",
             submittedBy: "citizen-sos",
             isSOS: true,
             status: "Ambulance Dispatched"
@@ -154,11 +221,26 @@ export default function Landing() {
     { name:"Dr. Samy Abu Naser",    sup:true  },
   ];
 
-  // ── CITIZEN PORTAL ───────────────────────
   if (view === "citizen") {
     const stBadge = s => s==="Open"?"b-green":s==="Moderate"?"b-amber":"b-red";
     const pct = h => Math.round(((h.emergencyCapacity - h.availableBeds) / h.emergencyCapacity) * 100);
     const stLabel = s => s==="Open"?t("open"):s==="Moderate"?t("moderate"):t("overloaded");
+
+    const sortedHospitals = userLocation 
+      ? [...hospitals].map(h => {
+          const ZONE_GPS = {
+            north:{lat:31.532,lng:34.493}, gaza:{lat:31.500,lng:34.466},
+            central:{lat:31.413,lng:34.350}, south:{lat:31.346,lng:34.306},
+            farsouth:{lat:31.286,lng:34.247}
+          };
+          const hz = h.zone || "gaza";
+          const coords = ZONE_GPS[hz] || ZONE_GPS.gaza;
+          const dLat = userLocation.lat - coords.lat;
+          const dLng = userLocation.lng - coords.lng;
+          const dist = Math.sqrt(dLat*dLat + dLng*dLng);
+          return { ...h, _dist: dist };
+        }).sort((a,b) => a._dist - b._dist)
+      : hospitals;
 
     const REGION_OPTGROUPS = [
       { label:"🔴 "+(lang==="ar"?"شمال غزة":"North Gaza"), opts:[
@@ -215,34 +297,20 @@ export default function Landing() {
         </div>
 
         <div className="cp-body">
-          {submitted && (
-            <div style={{marginBottom:28,background:"var(--green-l)",border:"1px solid var(--green-b)",borderRadius:14,padding:24,textAlign:"center"}}>
-              <div style={{fontSize:44,marginBottom:10}}>✅</div>
-              <div style={{fontSize:18,fontWeight:800,color:"var(--green)",marginBottom:8}}>{t("requestSubmitted")}</div>
-              <div style={{fontSize:13.5,color:"var(--green)",marginBottom:16}}>{t("requestReceived")}</div>
-              <div style={{background:"white",borderRadius:10,padding:16,display:"inline-block",textAlign:"left",minWidth:280}}>
-                <div style={{fontSize:11,color:"var(--g400)",textTransform:"uppercase",letterSpacing:".06em",fontWeight:600,marginBottom:4}}>{t("requestId")}</div>
-                <div style={{fontFamily:"monospace",fontSize:13,fontWeight:700,color:"var(--blue)",marginBottom:12,wordBreak:"break-all"}}>{submitted.id}</div>
-                {submitted.hospital && <>
-                  <div style={{fontSize:11,color:"var(--g400)",textTransform:"uppercase",letterSpacing:".06em",fontWeight:600,marginBottom:4}}>{t("assignedHospital")}</div>
-                  <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>{lang==="ar" && submitted.hospital.nameAr ? submitted.hospital.nameAr : submitted.hospital.name}</div>
-                  <div style={{fontSize:12.5,color:"var(--g400)"}}>📍 {lang==="ar" && submitted.hospital.locationAr ? submitted.hospital.locationAr : submitted.hospital.location}</div>
-                  <div style={{fontSize:12.5,color:"var(--g400)"}}>📞 <span className="phone-num">{submitted.hospital.contact}</span></div>
-                </>}
-              </div>
-              <div style={{marginTop:16}}>
-                <button className="btn btn-green" onClick={() => setSubmitted(null)}>{t("submitAnother")}</button>
-              </div>
-            </div>
-          )}
-
           <div className="cp-hero">
             <h1 className="cp-hero-title">{t("welcomeCitizen")}</h1>
             <p className="cp-hero-sub">{t("welcomeCitizenSub")}</p>
+            {userLocation && (
+              <div style={{marginTop:8, fontSize:13, color:"var(--green)", fontWeight:600}}>
+                📍 {lang==="ar" ? "تم تحديد موقعك — المستشفيات مرتبة حسب الأقرب" : "Your location detected — hospitals sorted by nearest"}
+              </div>
+            )}
           </div>
 
-          <div className="cp-actions">
-            <div className="cp-action-card" style={{background:"var(--red-l)",borderColor:"var(--red-b)"}} onClick={() => { setReqModal(true); setError(""); }}>
+          <div className="cp-actions" style={{alignItems:"stretch"}}>            
+            <div className="cp-action-card" 
+              style={{background:"var(--red-l)", borderColor:"var(--red-b)"}} 
+              onClick={() => { setReqModal(true); setError(""); }}>
               <div className="cp-action-icon" style={{background:"var(--red)"}}><AlertIcon /></div>
               <div className="cp-action-title" style={{color:"var(--red-d)"}}>{t("emergencyRequest")}</div>
               <div className="cp-action-desc" style={{color:"var(--g600)"}}>{t("emergencyRequestDesc")}</div>
@@ -251,12 +319,14 @@ export default function Landing() {
               </button>
             </div>
 
-            <div className="cp-action-card" style={{background:"var(--blue-l)",borderColor:"var(--blue-b)"}}>
+            <div className="cp-action-card" 
+              style={{background:"var(--blue-l)", borderColor:"var(--blue-b)", cursor:"pointer"}}
+              onClick={() => document.getElementById("hospSection").scrollIntoView({behavior:"smooth"})}>
               <div className="cp-action-icon" style={{background:"var(--blue)"}}><HospIcon /></div>
               <div className="cp-action-title" style={{color:"var(--blue-d)"}}>{t("viewHospitals")}</div>
               <div className="cp-action-desc" style={{color:"var(--g600)"}}>{t("viewHospitalsDesc")}</div>
               <button className="cp-action-btn" style={{background:"var(--blue)",color:"white"}}
-                onClick={() => document.getElementById("hospSection").scrollIntoView({behavior:"smooth"})}>
+                onClick={(e) => { e.stopPropagation(); document.getElementById("hospSection").scrollIntoView({behavior:"smooth"}); }}>
                 {t("viewHospitalsBtn")}
               </button>
             </div>
@@ -269,7 +339,7 @@ export default function Landing() {
             </div>
             {seeding ? <div className="loading"><div className="spin"/><span>{t("loading")}</span></div>
             : <div className="hosp-grid">
-                {hospitals.map(h => {
+                {sortedHospitals.map(h => {
                   const p = pct(h);
                   const cc = p<50?"c-lo":p<80?"c-md":"c-hi";
                   return (
@@ -305,7 +375,68 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* EMERGENCY REQUEST MODAL */}
+        {submitted && (
+          <div className="modal-ov" onClick={() => setSubmitted(null)} style={{zIndex:9999}}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:500, textAlign:"center"}}>
+              <div style={{padding:32}}>
+                <div style={{fontSize:64, marginBottom:14}}>🚑</div>
+                <div style={{fontSize:22, fontWeight:800, color:"var(--green)", marginBottom:10}}>
+                  {t("requestSubmitted")}
+                </div>
+                <div style={{fontSize:14, color:"var(--g600)", marginBottom:20}}>
+                  {t("requestReceived")}
+                </div>
+                <div style={{background:"var(--g50)", borderRadius:12, padding:18, textAlign:lang==="ar"?"right":"left", marginBottom:18}}>
+                  <div style={{fontSize:11, color:"var(--g400)", fontWeight:600, marginBottom:4, textTransform:"uppercase"}}>{t("requestId")}</div>
+                  <div style={{fontFamily:"monospace", fontSize:13, fontWeight:700, color:"var(--blue)", marginBottom:14, wordBreak:"break-all"}}>{submitted.id}</div>
+                  {submitted.hospital && <>
+                    <div style={{fontSize:11, color:"var(--g400)", fontWeight:600, marginBottom:4, textTransform:"uppercase"}}>{t("assignedHospital")}</div>
+                    <div style={{fontWeight:700, fontSize:15, marginBottom:4}}>{lang==="ar" && submitted.hospital.nameAr ? submitted.hospital.nameAr : submitted.hospital.name}</div>
+                    <div style={{fontSize:13, color:"var(--g500)", marginBottom:3}}>📍 {lang==="ar" && submitted.hospital.locationAr ? submitted.hospital.locationAr : submitted.hospital.location}</div>
+                    <div style={{fontSize:13, color:"var(--g500)"}}>📞 <span className="phone-num">{submitted.hospital.contact}</span></div>
+                  </>}
+                </div>
+                <div style={{display:"flex", gap:10, justifyContent:"center"}}>
+                  <button className="btn btn-green" onClick={() => setSubmitted(null)}>
+                    {lang==="ar"?"حسناً":"OK"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR POPUP */}
+        {errorPopup && (
+          <div className="modal-ov" onClick={() => setErrorPopup(null)} style={{zIndex:10000}}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:420, textAlign:"center"}}>
+              <div style={{padding:"32px 28px"}}>
+                <div style={{
+                  width:70, height:70, borderRadius:"50%",
+                  background:"linear-gradient(135deg, #FEE2E2, #FECACA)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  margin:"0 auto 18px", fontSize:36
+                }}>⚠️</div>
+                <div style={{fontSize:19, fontWeight:800, color:"var(--red-d)", marginBottom:10}}>
+                  {errorPopup.title}
+                </div>
+                <div style={{fontSize:14, color:"var(--g600)", marginBottom:22, whiteSpace:"pre-line", lineHeight:1.7}}>
+                  {errorPopup.message}
+                </div>
+                <button 
+                  onClick={() => setErrorPopup(null)}
+                  style={{
+                    background:"var(--red)", color:"white", border:"none",
+                    padding:"11px 36px", borderRadius:10, fontSize:14, fontWeight:700,
+                    cursor:"pointer", minWidth:140
+                  }}>
+                  {lang==="ar" ? "حسناً" : "OK"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {reqModal && (
           <div className="modal-ov" onClick={() => setReqModal(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
@@ -317,7 +448,6 @@ export default function Landing() {
               </div>
               <form onSubmit={handleSubmitReq}>
                 <div className="modal-body">
-                  {error && <div className="auth-err">{error}</div>}
                   <div style={{background:"var(--red-l)",border:"1px solid var(--red-b)",borderRadius:8,padding:"10px 13px",marginBottom:16,fontSize:13,color:"var(--red-d)",fontWeight:500}}>
                     {t("fillDetails")}
                   </div>
@@ -328,7 +458,7 @@ export default function Landing() {
                     </div>
                     <div className="fg">
                       <label>{t("phoneNumber")} *</label>
-                      <input name="phone" placeholder="+970 xx xxxx xxxx" value={reqForm.phone} onChange={chReq} dir="ltr" style={{textAlign:"left"}}/>
+                      <input name="phone" placeholder="+970/+972/05... (e.g. 0592283728)" value={reqForm.phone} onChange={chReq} dir="ltr" style={{textAlign:"left"}}/>
                     </div>
                     <div className="fg">
                       <label>{t("emergencyType")} *</label>
@@ -341,6 +471,7 @@ export default function Landing() {
                         <option value="Stroke">{t("stroke")}</option>
                         <option value="Burns">{t("burns")}</option>
                         <option value="Fracture">{t("fracture")}</option>
+                        <option value="Fainting">{t("fainting")}</option>
                         <option value="Other">{t("other")}</option>
                       </select>
                     </div>
@@ -350,10 +481,18 @@ export default function Landing() {
                         <option value="High">🔴 {t("high")}</option>
                         <option value="Medium">🟡 {t("medium")}</option>
                         <option value="Low">🟢 {t("low")}</option>
+                        <option value="Unknown">⚫ {t("unknown")}</option>
                       </select>
                     </div>
                     <div className="fg full">
-                      <label>{t("location")} *</label>
+                      <label>
+                        {t("location")} *
+                        {userLocationName && (
+                          <span style={{fontSize:11, color:"var(--green)", fontWeight:600, marginRight:8, marginLeft:8}}>
+                            📍 {lang==="ar" ? `موقعك: ${userLocationName} — يمكنك تغييره` : `Your location: ${userLocationName} — you can change it`}
+                          </span>
+                        )}
+                      </label>
                       <select name="location" value={reqForm.location} onChange={chReq}>
                         <option value="">{lang==="ar"?"اختر منطقتك...":"Select your region..."}</option>
                         {REGION_OPTGROUPS.map(g => (
@@ -389,7 +528,6 @@ export default function Landing() {
     );
   }
 
-  // ── MAIN LANDING ───────────────────────
   return (
     <div className="landing">
       <div className="land-top">
@@ -417,7 +555,6 @@ export default function Landing() {
         </h1>
         <p className="land-sub">{t("landingSub")}</p>
 
-        {/* SOS BUTTON */}
         <div style={{textAlign:"center", marginBottom:36}}>
           <button onClick={handleSOS} disabled={sosLoading || seeding}
             style={{

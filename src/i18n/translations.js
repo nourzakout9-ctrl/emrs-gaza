@@ -55,7 +55,7 @@ const t = {
     welcomeCitizen: "Welcome to Emergency Services",
     welcomeCitizenSub: "Choose what you need — submit an emergency request immediately or browse available hospitals and their current status.",
     emergencyRequest: "Emergency Request",
-    emergencyRequestDesc: "Submit an emergency request now. Our system will instantly recommend the most suitable hospital for your case.",
+    emergencyRequestDesc: "Submit an emergency request now. Our system will  recommend the most suitable hospital for your case.",
     submitRequestNow: "🚨 Submit Request Now",
     viewHospitals: "View Hospitals",
     viewHospitalsDesc: "Browse all available hospitals, check bed availability, capacity status, and specialties before making a decision.",
@@ -72,6 +72,7 @@ const t = {
     high: "High — Life Threatening",
     medium: "Medium — Urgent",
     low: "Low — Non-urgent",
+    unknown: "Unknown",
     location: "Location / Address",
     description: "Description",
     descPlaceholder: "Describe the emergency situation...",
@@ -96,6 +97,7 @@ const t = {
     stroke: "Stroke",
     burns: "Burns",
     fracture: "Fracture",
+    fainting: "Fainting",
     other: "Other",
 
     // Sidebar
@@ -341,6 +343,7 @@ const t = {
     high: "عالية — تهدد الحياة",
     medium: "متوسطة — عاجلة",
     low: "منخفضة — غير عاجلة",
+    unknown: "غير معروف",
     location: "الموقع / العنوان",
     description: "الوصف",
     descPlaceholder: "اشرح حالة الطوارئ...",
@@ -365,6 +368,7 @@ const t = {
     stroke: "جلطة دماغية",
     burns: "حروق",
     fracture: "كسر",
+    fainting: "إغماء",
     other: "أخرى",
 
     // Sidebar

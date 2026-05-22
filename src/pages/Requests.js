@@ -62,6 +62,21 @@ export default function Requests() {
     load();
   }
 
+  async function doCancel(id) {
+    const reason = window.prompt(
+      lang === "ar" 
+        ? "سبب الإلغاء (اختياري):" 
+        : "Reason for cancellation (optional):"
+    );
+    if (reason === null) return; // user clicked Cancel on prompt
+    await updateRequestStatus(id, "Cancelled", { 
+      cancellationReason: reason || (lang === "ar" ? "بدون سبب محدد" : "No reason given") 
+    });
+    showToast(lang === "ar" ? "تم إلغاء الطلب" : "Request cancelled");
+    if (detail?.id === id) setDetail(prev => ({...prev, status: "Cancelled", cancellationReason: reason}));
+    load();
+  }
+
   async function doDelete(id) {
     if (!window.confirm(t("reqDelete"))) return;
     await deleteRequest(id);
@@ -122,8 +137,12 @@ export default function Requests() {
                     {effectiveRole==="hospital"&&r.status==="Pending"&&<>
                       <button className="btn btn-green btn-sm" onClick={()=>openAccept(r)}>{t("accept")}</button>
                       <button className="btn btn-danger btn-sm" onClick={()=>doStatus(r.id,"Rejected")}>{t("reject")}</button>
+                      <button className="btn btn-gray btn-sm" onClick={()=>doCancel(r.id)}>{lang==="ar"?"إلغاء":"Cancel"}</button>
                     </>}
-                    {effectiveRole==="hospital"&&r.status==="Accepted"&&<button className="btn btn-sm" style={{background:"var(--blue)",color:"white"}} onClick={()=>doStatus(r.id,"In Progress")}>{t("start")}</button>}
+                    {effectiveRole==="hospital"&&r.status==="Accepted"&&<>
+                      <button className="btn btn-sm" style={{background:"var(--blue)",color:"white"}} onClick={()=>doStatus(r.id,"In Progress")}>{t("start")}</button>
+                      <button className="btn btn-gray btn-sm" onClick={()=>doCancel(r.id)}>{lang==="ar"?"إلغاء":"Cancel"}</button>
+                    </>}
                     {effectiveRole==="hospital"&&r.status==="In Progress"&&<button className="btn btn-green btn-sm" onClick={()=>doStatus(r.id,"Completed")}>{t("complete")}</button>}
                     <button className="btn btn-outline btn-sm" onClick={()=>setDetail(r)}>{t("view")}</button>
                     {effectiveRole==="admin"&&<button className="btn btn-danger btn-sm" onClick={()=>doDelete(r.id)}>{t("delete")}</button>}
@@ -239,6 +258,12 @@ export default function Requests() {
                   <div style={{fontSize:10.5,color:"var(--g400)",textTransform:"uppercase",letterSpacing:".06em",fontWeight:600,marginBottom:2}}>{t("statusLabel")}</div>
                   <span className={`badge ${SB(detail.status)}`}><span className="bd"/>{stLabel(detail.status)}</span>
                 </div>
+                {detail.cancellationReason && (
+                  <div style={{gridColumn:"1/-1"}}>
+                    <div style={{fontSize:10.5,color:"var(--g400)",textTransform:"uppercase",letterSpacing:".06em",fontWeight:600,marginBottom:2}}>{lang==="ar"?"سبب الإلغاء":"Cancellation Reason"}</div>
+                    <div style={{fontSize:13.5,color:"var(--red)",fontWeight:600}}>{detail.cancellationReason}</div>
+                  </div>
+                )}
                 <div style={{gridColumn:"1/-1"}}>
                   <div style={{fontSize:10.5,color:"var(--g400)",textTransform:"uppercase",letterSpacing:".06em",fontWeight:600,marginBottom:2}}>{t("descriptionLabel")}</div>
                   <div style={{fontSize:13.5}}>{detail.description || "—"}</div>
@@ -259,9 +284,13 @@ export default function Requests() {
             <div className="modal-foot">
               {effectiveRole==="hospital"&&detail.status==="Pending"&&<>
                 <button className="btn btn-danger btn-sm" onClick={()=>doStatus(detail.id,"Rejected")}>{t("rejectThis")}</button>
+                <button className="btn btn-gray btn-sm" onClick={()=>doCancel(detail.id)}>{lang==="ar"?"إلغاء الطلب":"Cancel Request"}</button>
                 <button className="btn btn-green btn-sm" onClick={()=>{setDetail(null);openAccept(detail);}}>{t("acceptSelectHospital")}</button>
               </>}
-              {effectiveRole==="hospital"&&detail.status==="Accepted"&&<button className="btn btn-sm" style={{background:"var(--blue)",color:"white"}} onClick={()=>doStatus(detail.id,"In Progress")}>{t("markInProgress")}</button>}
+              {effectiveRole==="hospital"&&detail.status==="Accepted"&&<>
+                <button className="btn btn-gray btn-sm" onClick={()=>doCancel(detail.id)}>{lang==="ar"?"إلغاء":"Cancel"}</button>
+                <button className="btn btn-sm" style={{background:"var(--blue)",color:"white"}} onClick={()=>doStatus(detail.id,"In Progress")}>{t("markInProgress")}</button>
+              </>}
               {effectiveRole==="hospital"&&detail.status==="In Progress"&&<button className="btn btn-green btn-sm" onClick={()=>doStatus(detail.id,"Completed")}>{t("markCompleted")}</button>}
               <button className="btn btn-gray" onClick={()=>setDetail(null)}>{t("close")}</button>
             </div>
