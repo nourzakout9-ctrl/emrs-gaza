@@ -5,6 +5,20 @@ import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import { getAllRequests, getHospitals } from "../firebase/service";
 import Layout from "../components/Layout";
+function translateType(type, t) {
+  const map = {
+    "Cardiac Arrest": "cardiacArrest",
+    "Trauma / Injury": "traumaInjury",
+    "Pediatric Emergency": "pediatricEmergency",
+    "Respiratory Distress": "respiratoryDistress",
+    "Stroke": "stroke",
+    "Burns": "burns",
+    "Fracture": "fracture",
+    "Fainting": "fainting",
+    "Other": "other"
+  };
+  return map[type] ? t(map[type]) : type;
+}
 
 const SB = s => ({Pending:"b-amber",Accepted:"b-green","In Progress":"b-blue",Completed:"b-green",Rejected:"b-red",Cancelled:"b-gray"}[s]||"b-gray");
 const SVG = {
@@ -74,12 +88,12 @@ export default function Dashboard() {
                 <thead><tr><th>{t("type")}</th><th>{t("patient")}</th><th>{t("phone")}</th><th>{t("hospital")}</th><th>{t("status")}</th><th>{t("priorityLabel")}</th></tr></thead>
                 <tbody>{requests.slice(0,5).map(r => (
                   <tr key={r.id}>
-                    <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : r.emergencyType}</td>
+                    <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : (lang==="ar" && r.emergencyType ? translateType(r.emergencyType, t) : r.emergencyType)}</td>
                     <td>{r.patientName}</td>
                     <td style={{fontSize:12.5,color:"var(--g400)"}}><span className="phone-num">{r.phone}</span></td>
                     <td style={{fontSize:12.5,maxWidth:150}}>{lang==="ar" && r.hospitalNameAr ? r.hospitalNameAr : r.hospitalName}</td>
                     <td><span className={`badge ${SB(r.status)}`}><span className="bd"/>{stLabel(r.status)}</span></td>
-                    <td><span className={`p-${r.priority}`}>{r.priority==="High"?t("high").split("—")[0].trim():r.priority==="Medium"?t("medium").split("—")[0].trim():t("low").split("—")[0].trim()}</span></td>
+                    <td><span className={`p-${r.priority}`}>{r.priority==="High"?t("high").split("—")[0].trim():r.priority==="Medium"?t("medium").split("—")[0].trim():r.priority==="Unknown"?t("unknown"):t("low").split("—")[0].trim()}</span></td>
                   </tr>
                 ))}</tbody>
               </table></div>}

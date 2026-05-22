@@ -4,6 +4,20 @@ import { getAllRequests, updateRequestStatus, deleteRequest, getHospitals, getTo
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import Layout from "../components/Layout";
+function translateType(type, t) {
+  const map = {
+    "Cardiac Arrest": "cardiacArrest",
+    "Trauma / Injury": "traumaInjury",
+    "Pediatric Emergency": "pediatricEmergency",
+    "Respiratory Distress": "respiratoryDistress",
+    "Stroke": "stroke",
+    "Burns": "burns",
+    "Fracture": "fracture",
+    "Fainting": "fainting",
+    "Other": "other"
+  };
+  return map[type] ? t(map[type]) : type;
+}
 
 const SB = s => ({Pending:"b-amber",Accepted:"b-green","In Progress":"b-blue",Completed:"b-green",Rejected:"b-red",Cancelled:"b-gray","Ambulance Dispatched":"b-red"}[s]||"b-gray");
 
@@ -126,12 +140,12 @@ export default function Requests() {
               <thead><tr><th>{t("type")}</th><th>{t("patient")}</th><th>{t("locationLabel")}</th><th>{t("assignedHospital")}</th><th>{t("status")}</th><th>{t("priorityLabel")}</th><th>{t("date")}</th><th>{t("actions")}</th></tr></thead>
               <tbody>{shown.map(r => (
                 <tr key={r.id}>
-                  <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : r.emergencyType}</td>
+                  <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : (lang==="ar" ? translateType(r.emergencyType, t) : r.emergencyType)}</td>
                   <td><div style={{fontWeight:600}}>{r.patientName}</div><div style={{fontSize:12,color:"var(--g400)"}}><span className="phone-num">{r.phone}</span></div></td>
                   <td style={{fontSize:12.5,color:"var(--g500)",maxWidth:110}}>{lang==="ar" && r.locationAr ? r.locationAr : r.location}</td>
                   <td style={{fontSize:12.5,maxWidth:130}}>{lang==="ar" && r.hospitalNameAr ? r.hospitalNameAr : r.hospitalName}</td>
                   <td><span className={`badge ${SB(r.status)}`}><span className="bd"/>{stLabel(r.status)}</span></td>
-                  <td><span className={`p-${r.priority}`}>{r.priority}</span></td>
+                  <td><span className={`p-${r.priority}`}>{r.priority==="High"?t("high").split("—")[0].trim():r.priority==="Medium"?t("medium").split("—")[0].trim():r.priority==="Unknown"?t("unknown"):r.priority==="Low"?t("low").split("—")[0].trim():r.priority}</span></td>
                   <td style={{fontSize:12,color:"var(--g400)",whiteSpace:"nowrap"}}>{r.createdAt?.toDate?r.createdAt.toDate().toLocaleDateString():"—"}</td>
                   <td><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                     {effectiveRole==="hospital"&&r.status==="Pending"&&<>
