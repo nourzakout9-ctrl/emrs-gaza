@@ -79,7 +79,7 @@ export default function Landing() {
             if (d < minDist) { minDist = d; closest = name; }
           }
           setUserLocationName(closest);
-          setReqForm(prev => ({ ...prev, location: closest }));
+            // لا نملأ الحقل تلقائياً — فقط نقترح 
         },
         (err) => console.log("Location denied:", err),
         { enableHighAccuracy: true, timeout: 10000 }
@@ -486,12 +486,22 @@ export default function Landing() {
                     </div>
                     <div className="fg full">
                       <label>
-                        {t("location")} *
-                        {userLocationName && (
-                          <span style={{fontSize:11, color:"var(--green)", fontWeight:600, marginRight:8, marginLeft:8}}>
-                            📍 {lang==="ar" ? `موقعك: ${userLocationName} — يمكنك تغييره` : `Your location: ${userLocationName} — you can change it`}
-                          </span>
-                        )}
+                      {t("location")} *
+                      {userLocationName && (
+                     <span style={{fontSize:11, color:"var(--blue)", fontWeight:600, marginRight:8, marginLeft:8}}>
+                     💡 {lang==="ar" ? `نقترح: ${userLocationName}` : `Suggested: ${userLocationName}`}
+                        <button 
+                          type="button"
+                          onClick={() => setReqForm(prev => ({...prev, location: userLocationName}))}
+                            style={{
+                              marginLeft:8, marginRight:8, background:"var(--blue)", color:"white",
+                              border:"none", padding:"2px 10px", borderRadius:6, fontSize:11, fontWeight:700,
+                              cursor:"pointer"
+                            }}>
+                          {lang==="ar"?"استخدم":"Use"}
+                       </button>
+                        </span>
+                      )}
                       </label>
                       <select name="location" value={reqForm.location} onChange={chReq}>
                         <option value="">{lang==="ar"?"اختر منطقتك...":"Select your region..."}</option>
