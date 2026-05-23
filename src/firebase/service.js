@@ -176,7 +176,16 @@ export function getTopHospitals(hospitals, type, addr) {
 
 export async function seedAll() {
   const hSnap = await getDocs(collection(db, "hospitals"));
-  const existingHospitalNames = hSnap.docs.map(d => d.data().name);
+  
+  // إذا كان فيه أكثر من 12 مستشفى = تكرار، نمسح ونعيد
+  if (hSnap.docs.length > 12) {
+    for (const docSnap of hSnap.docs) {
+      await deleteDoc(doc(db, "hospitals", docSnap.id));
+    }
+  }
+  
+  const hSnap2 = await getDocs(collection(db, "hospitals"));
+  const existingHospitalNames = hSnap2.docs.map(d => d.data().name);
 
   const hospitals = [
     { name:"Al-Shifa Medical Complex",      nameAr:"مجمع الشفاء الطبي",            zone:"gaza",     location:"Rimal, Gaza City",         locationAr:"الرمال، مدينة غزة",         status:"Overloaded", availableBeds:8,  emergencyCapacity:500, staff:60, specialties:"Cardiac, Trauma, Neurology, Surgery, Pediatric, Orthopedics", specialtiesAr:"قلب، إصابات، أعصاب، جراحة، أطفال، عظام", contact:"+970-8-282-8282", responseRate:0.88 },
