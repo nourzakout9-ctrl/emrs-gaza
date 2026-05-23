@@ -140,8 +140,7 @@ export default function Requests() {
               <thead><tr><th>{t("type")}</th><th>{t("patient")}</th><th>{t("locationLabel")}</th><th>{t("assignedHospital")}</th><th>{t("status")}</th><th>{t("priorityLabel")}</th><th>{t("date")}</th><th>{t("actions")}</th></tr></thead>
               <tbody>{shown.map(r => (
                 <tr key={r.id}>
-                  <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : (lang==="ar" ? translateType(r.emergencyType, t) : r.emergencyType)}</td>
-                  <td><div style={{fontWeight:600}}>{r.patientName}</div><div style={{fontSize:12,color:"var(--g400)"}}><span className="phone-num">{r.phone}</span></div></td>
+                  <td style={{fontWeight:600}}>{lang==="ar" ? translateType(r.emergencyType, t) : r.emergencyType}</td>                  <td><div style={{fontWeight:600}}>{r.patientName}</div><div style={{fontSize:12,color:"var(--g400)"}}><span className="phone-num">{r.phone}</span></div></td>
                   <td style={{fontSize:12.5,color:"var(--g500)",maxWidth:110}}>{lang==="ar" && r.locationAr ? r.locationAr : r.location}</td>
                   <td style={{fontSize:12.5,maxWidth:130}}>{lang==="ar" && r.hospitalNameAr ? r.hospitalNameAr : r.hospitalName}</td>
                   <td><span className={`badge ${SB(r.status)}`}><span className="bd"/>{stLabel(r.status)}</span></td>

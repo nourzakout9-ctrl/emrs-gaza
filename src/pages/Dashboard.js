@@ -88,8 +88,7 @@ export default function Dashboard() {
                 <thead><tr><th>{t("type")}</th><th>{t("patient")}</th><th>{t("phone")}</th><th>{t("hospital")}</th><th>{t("status")}</th><th>{t("priorityLabel")}</th></tr></thead>
                 <tbody>{requests.slice(0,5).map(r => (
                   <tr key={r.id}>
-                    <td style={{fontWeight:600}}>{lang==="ar" && r.emergencyTypeAr ? r.emergencyTypeAr : (lang==="ar" && r.emergencyType ? translateType(r.emergencyType, t) : r.emergencyType)}</td>
-                    <td>{r.patientName}</td>
+                    <td style={{fontWeight:600}}>{lang==="ar" ? translateType(r.emergencyType, t) : r.emergencyType}</td>                    <td>{r.patientName}</td>
                     <td style={{fontSize:12.5,color:"var(--g400)"}}><span className="phone-num">{r.phone}</span></td>
                     <td style={{fontSize:12.5,maxWidth:150}}>{lang==="ar" && r.hospitalNameAr ? r.hospitalNameAr : r.hospitalName}</td>
                     <td><span className={`badge ${SB(r.status)}`}><span className="bd"/>{stLabel(r.status)}</span></td>

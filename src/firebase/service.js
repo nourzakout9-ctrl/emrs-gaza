@@ -109,6 +109,10 @@ function zd(z1, z2) {
 }
 
 function scoreOne(h, type, addr) {
+  // مستشفى الدرة للأطفال فقط
+  if (h.name === "Al-Durra Pediatric Hospital" && type !== "Pediatric Emergency") {
+    return -1;
+  }
   // درجة التوفّر (30%)
   const a = Math.min((h.availableBeds / (h.emergencyCapacity || 100)), 1);
   
@@ -159,14 +163,15 @@ export function recommendHospital(hospitals, type, addr) {
   const av = hospitals.filter(h => h.status !== "Overloaded" && h.availableBeds > 0);
   const pool = av.length ? av : hospitals.filter(h => h.availableBeds > 0);
   if (!pool.length) return hospitals[0];
-  return pool.map(h => ({...h, score: scoreOne(h, type, addr)})).sort((a,b)=>b.score-a.score)[0];
+  const scored = pool.map(h => ({...h, score: scoreOne(h, type, addr)})).filter(h => h.score >= 0).sort((a,b)=>b.score-a.score);
+  return scored[0] || pool[0];
 }
 
 export function getTopHospitals(hospitals, type, addr) {
   const av = hospitals.filter(h => h.status !== "Overloaded" && h.availableBeds > 0);
   const pool = av.length ? av : hospitals.filter(h => h.availableBeds > 0);
   if (!pool.length) return hospitals.slice(0,3);
-  return pool.map(h => ({...h, score: scoreOne(h, type, addr)})).sort((a,b)=>b.score-a.score).slice(0,3);
+  return pool.map(h => ({...h, score: scoreOne(h, type, addr)})).filter(h => h.score >= 0).sort((a,b)=>b.score-a.score).slice(0,3);
 }
 
 export async function seedAll() {
