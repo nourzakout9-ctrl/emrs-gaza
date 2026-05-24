@@ -14,8 +14,7 @@ export default function Hospitals() {
   const [loading,   setLoading]   = useState(true);
   const [edit,      setEdit]      = useState(null);
   const [addM,      setAddM]      = useState(false);
-  const [nH,        setNH]        = useState({name:"",location:"",status:"Open",availableBeds:20,emergencyCapacity:100,staff:5,specialties:"",contact:""});
-  const [toast,     setToast]     = useState(null);
+  const [nH, setNH] = useState({name:"",nameAr:"",location:"",locationDetails:"",status:"Open",availableBeds:20,emergencyCapacity:100,staff:5,specialties:"",specialtiesAr:"",contact:""});  const [toast,     setToast]     = useState(null);
 
   useEffect(() => { load(); }, []);
   async function load() { setLoading(true); setHospitals(await getHospitals()); setLoading(false); }
@@ -74,7 +73,8 @@ export default function Hospitals() {
           <div className="fg"><label>{t("availableBeds")}</label><input type="number" min="0" value={edit.availableBeds} onChange={e=>setEdit(x=>({...x,availableBeds:e.target.value}))}/></div>
           <div className="fg"><label>{t("totalCapacity")}</label><input type="number" min="1" value={edit.emergencyCapacity} onChange={e=>setEdit(x=>({...x,emergencyCapacity:e.target.value}))}/></div>
           <div className="fg"><label>{t("onDutyStaff")}</label><input type="number" min="0" value={edit.staff} onChange={e=>setEdit(x=>({...x,staff:e.target.value}))}/></div>
-          <div className="fg full"><label>{t("specialties")}</label><input value={edit.specialties||""} onChange={e=>setEdit(x=>({...x,specialties:e.target.value}))}/></div>
+          <div className="fg full"><label>{t("specialties")} ({lang==="ar"?"إنجليزي":"English"})</label><input value={edit.specialties||""} onChange={e=>setEdit(x=>({...x,specialties:e.target.value}))} dir="ltr"/></div>
+          <div className="fg full"><label>{t("specialties")} ({lang==="ar"?"عربي":"Arabic"})</label><input value={edit.specialtiesAr||""} onChange={e=>setEdit(x=>({...x,specialtiesAr:e.target.value}))} dir="rtl"/></div>
           <div className="fg full"><label>{t("contact")}</label><input dir="ltr" style={phoneStyle} placeholder="+970-xx-xxx-xxxx" value={edit.contact||""} onChange={e=>setEdit(x=>({...x,contact:e.target.value}))}/></div>
         </div></div>
         <div className="modal-foot"><button className="btn btn-gray" onClick={()=>setEdit(null)}>{t("cancel")}</button><button className="btn btn-blue" onClick={saveEdit}>{t("saveChanges")}</button></div>
@@ -84,12 +84,55 @@ export default function Hospitals() {
         <div className="modal-head"><div className="modal-title">{t("addNewHospital")}</div><button className="modal-x" onClick={()=>setAddM(false)}>✕</button></div>
         <div className="modal-body"><div className="fgrid">
           <div className="fg full"><label>{t("hospitalName")} *</label><input value={nH.name} onChange={e=>setNH(x=>({...x,name:e.target.value}))}/></div>
-          <div className="fg full"><label>{t("locationLabel")} *</label><input value={nH.location} onChange={e=>setNH(x=>({...x,location:e.target.value}))}/></div>
+          <div className="fg full"><label>{t("locationLabel")} *</label>
+  <select value={nH.location} onChange={e=>setNH(x=>({...x,location:e.target.value}))}>
+    <option value="">{lang==="ar"?"اختر المنطقة...":"Select region..."}</option>
+    <optgroup label={lang==="ar"?"شمال غزة":"North Gaza"}>
+      <option value="Jabalia, North Gaza">{lang==="ar"?"جباليا":"Jabalia"}</option>
+      <option value="Beit Lahia, North Gaza">{lang==="ar"?"بيت لاهيا":"Beit Lahia"}</option>
+      <option value="Beit Hanoun, North Gaza">{lang==="ar"?"بيت حانون":"Beit Hanoun"}</option>
+    </optgroup>
+    <optgroup label={lang==="ar"?"مدينة غزة":"Gaza City"}>
+      <option value="Rimal, Gaza City">{lang==="ar"?"الرمال":"Rimal"}</option>
+      <option value="Sheikh Radwan, Gaza City">{lang==="ar"?"الشيخ رضوان":"Sheikh Radwan"}</option>
+      <option value="Tuffah, Gaza City">{lang==="ar"?"التفاح":"Tuffah"}</option>
+      <option value="Shejaia, Gaza City">{lang==="ar"?"الشجاعية":"Shejaia"}</option>
+      <option value="Sabra, Gaza City">{lang==="ar"?"الصبرة":"Sabra"}</option>
+      <option value="Tel Al Hawa, Gaza City">{lang==="ar"?"تل الهوا":"Tel Al Hawa"}</option>
+      <option value="Beach Camp, Gaza City">{lang==="ar"?"مخيم الشاطئ":"Beach Camp"}</option>
+      <option value="Zeitoun, Gaza City">{lang==="ar"?"الزيتون":"Zeitoun"}</option>
+      <option value="Daraj, Gaza City">{lang==="ar"?"الدرج":"Daraj"}</option>
+    </optgroup>
+    <optgroup label={lang==="ar"?"المنطقة الوسطى":"Central Gaza"}>
+      <option value="Nuseirat, Central Gaza">{lang==="ar"?"النصيرات":"Nuseirat"}</option>
+      <option value="Bureij, Central Gaza">{lang==="ar"?"البريج":"Bureij"}</option>
+      <option value="Maghazi, Central Gaza">{lang==="ar"?"المغازي":"Maghazi"}</option>
+      <option value="Deir Al-Balah, Central Gaza">{lang==="ar"?"دير البلح":"Deir Al-Balah"}</option>
+    </optgroup>
+    <optgroup label={lang==="ar"?"خان يونس":"Khan Younis"}>
+      <option value="Khan Younis">{lang==="ar"?"مدينة خان يونس":"Khan Younis City"}</option>
+      <option value="Abasan, Khan Younis">{lang==="ar"?"عبسان":"Abasan"}</option>
+      <option value="Bani Suheila, Khan Younis">{lang==="ar"?"بني سهيلا":"Bani Suheila"}</option>
+      <option value="Al-Qarara, Khan Younis">{lang==="ar"?"القرارة":"Al-Qarara"}</option>
+    </optgroup>
+    <optgroup label={lang==="ar"?"رفح":"Rafah"}>
+      <option value="Rafah">{lang==="ar"?"مدينة رفح":"Rafah City"}</option>
+      <option value="Tal Al-Sultan, Rafah">{lang==="ar"?"تل السلطان":"Tal Al-Sultan"}</option>
+      <option value="Al-Shaboura, Rafah">{lang==="ar"?"الشابورة":"Al-Shaboura"}</option>
+    </optgroup>
+  </select>
+           </div>
+<div className="fg full"><label>{lang==="ar"?"تفاصيل إضافية (اختياري)":"Additional details (optional)"}</label>
+  <input placeholder={lang==="ar"?"مثل: شارع الجلاء، بجانب الجامعة":"e.g. Al-Jalaa Street, near university"}
+    value={nH.locationDetails||""} 
+    onChange={e=>setNH(x=>({...x,locationDetails:e.target.value}))}/>
+</div>
           <div className="fg"><label>{t("availableBeds")}</label><input type="number" value={nH.availableBeds} onChange={e=>setNH(x=>({...x,availableBeds:e.target.value}))}/></div>
           <div className="fg"><label>{t("totalCapacity")}</label><input type="number" value={nH.emergencyCapacity} onChange={e=>setNH(x=>({...x,emergencyCapacity:e.target.value}))}/></div>
           <div className="fg"><label>{t("onDutyStaff")}</label><input type="number" value={nH.staff} onChange={e=>setNH(x=>({...x,staff:e.target.value}))}/></div>
           <div className="fg"><label>{t("status")}</label><select value={nH.status} onChange={e=>setNH(x=>({...x,status:e.target.value}))}><option value="Open">{t("open")}</option><option value="Moderate">{t("moderate")}</option><option value="Overloaded">{t("overloaded")}</option></select></div>
-          <div className="fg full"><label>{t("specialties")}</label><input value={nH.specialties} onChange={e=>setNH(x=>({...x,specialties:e.target.value}))}/></div>
+          <div className="fg full"><label>{t("specialties")} ({lang==="ar"?"إنجليزي":"English"})</label><input value={nH.specialties} onChange={e=>setNH(x=>({...x,specialties:e.target.value}))} dir="ltr"/></div>
+          <div className="fg full"><label>{t("specialties")} ({lang==="ar"?"عربي":"Arabic"})</label><input value={nH.specialtiesAr||""} onChange={e=>setNH(x=>({...x,specialtiesAr:e.target.value}))} dir="rtl"/></div>
           <div className="fg full"><label>{t("contact")}</label><input dir="ltr" style={phoneStyle} placeholder="+970-xx-xxx-xxxx" value={nH.contact} onChange={e=>setNH(x=>({...x,contact:e.target.value}))}/></div>
         </div></div>
         <div className="modal-foot"><button className="btn btn-gray" onClick={()=>setAddM(false)}>{t("cancel")}</button><button className="btn btn-blue" onClick={saveNew}>{t("addHospital").replace("+ ","")}</button></div>

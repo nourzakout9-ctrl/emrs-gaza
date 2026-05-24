@@ -32,6 +32,7 @@ export default function Landing() {
   const [userLocation, setUserLocation] = useState(null);
   const [userLocationName, setUserLocationName] = useState("");
   const [errorPopup, setErrorPopup] = useState(null);
+  const [chosenHospital, setChosenHospital] = useState(null);
   
   useEffect(() => {
     async function init() {
@@ -79,7 +80,6 @@ export default function Landing() {
             if (d < minDist) { minDist = d; closest = name; }
           }
           setUserLocationName(closest);
-            // لا نملأ الحقل تلقائياً — فقط نقترح 
         },
         (err) => console.log("Location denied:", err),
         { enableHighAccuracy: true, timeout: 10000 }
@@ -111,6 +111,7 @@ export default function Landing() {
     setView("citizen");
     setSubmitted(null);
     setReqModal(false);
+    setChosenHospital(null);
     setReqForm({ patientName:"", phone:"", location:"", emergencyType:"", priority:"High", description:"" });
   }
 
@@ -157,10 +158,12 @@ export default function Landing() {
       const typeOpt = typeSel ? typeSel.options[typeSel.selectedIndex] : null;
       const emergencyTypeAr = typeOpt ? typeOpt.text : reqForm.emergencyType;
 
-      const ref = await submitRequest({ ...reqForm, locationAr, emergencyTypeAr, submittedBy:"citizen" }, hospitals);
-      const best = recommendHospital(hospitals, reqForm.emergencyType, reqForm.location);
+      const hospitalToUse = chosenHospital ? [chosenHospital] : hospitals;
+      const ref = await submitRequest({ ...reqForm, locationAr, emergencyTypeAr, submittedBy:"citizen" }, hospitalToUse);
+      const best = chosenHospital || recommendHospital(hospitals, reqForm.emergencyType, reqForm.location);
       setSubmitted({ id: ref.id, hospital: best });
       setReqModal(false);
+      setChosenHospital(null);
     } catch {
       setError(t("submitFailed"));
     }
@@ -299,7 +302,7 @@ export default function Landing() {
         <div className="cp-body">
           <div className="cp-hero">
             <h1 className="cp-hero-title">{t("welcomeCitizen")}</h1>
-            <p className="cp-hero-sub">{t("welcomeCitizenSub")}</p>
+            <p className="cp-hero-sub">{t("welcomeCitizen")}</p>
             {userLocation && (
               <div style={{marginTop:8, fontSize:13, color:"var(--green)", fontWeight:600}}>
                 📍 {lang==="ar" ? "تم تحديد موقعك — المستشفيات مرتبة حسب الأقرب" : "Your location detected — hospitals sorted by nearest"}
@@ -310,11 +313,11 @@ export default function Landing() {
           <div className="cp-actions" style={{alignItems:"stretch"}}>            
             <div className="cp-action-card" 
               style={{background:"var(--red-l)", borderColor:"var(--red-b)"}} 
-              onClick={() => { setReqModal(true); setError(""); }}>
+              onClick={() => { setChosenHospital(null); setReqModal(true); setError(""); }}>
               <div className="cp-action-icon" style={{background:"var(--red)"}}><AlertIcon /></div>
               <div className="cp-action-title" style={{color:"var(--red-d)"}}>{t("emergencyRequest")}</div>
               <div className="cp-action-desc" style={{color:"var(--g600)"}}>{t("emergencyRequestDesc")}</div>
-              <button className="cp-action-btn" style={{background:"var(--red)",color:"white"}} onClick={e => { e.stopPropagation(); setReqModal(true); setError(""); }}>
+              <button className="cp-action-btn" style={{background:"var(--red)",color:"white"}} onClick={e => { e.stopPropagation(); setChosenHospital(null); setReqModal(true); setError(""); }}>
                 {t("submitRequestNow")}
               </button>
             </div>
@@ -364,7 +367,7 @@ export default function Landing() {
                       </div>
                       <div style={{fontSize:12,color:"var(--g600)",marginBottom:12}}><strong>{t("specialties")}: </strong>{lang==="ar" && h.specialtiesAr ? h.specialtiesAr : h.specialties}</div>
                       {h.contact && <div style={{fontSize:12,color:"var(--g400)",marginBottom:12}}>📞 <span className="phone-num">{h.contact}</span></div>}
-                      <button className="btn btn-red btn-sm btn-w" onClick={() => { setReqModal(true); setError(""); }}>
+                      <button className="btn btn-red btn-sm btn-w" onClick={() => { setChosenHospital(h); setReqModal(true); setError(""); }}>
                         {t("requestEmergency")}
                       </button>
                     </div>
@@ -406,7 +409,6 @@ export default function Landing() {
           </div>
         )}
 
-        {/* ERROR POPUP */}
         {errorPopup && (
           <div className="modal-ov" onClick={() => setErrorPopup(null)} style={{zIndex:10000}}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:420, textAlign:"center"}}>
@@ -451,6 +453,17 @@ export default function Landing() {
                   <div style={{background:"var(--red-l)",border:"1px solid var(--red-b)",borderRadius:8,padding:"10px 13px",marginBottom:16,fontSize:13,color:"var(--red-d)",fontWeight:500}}>
                     {t("fillDetails")}
                   </div>
+                  {chosenHospital && (
+                    <div style={{background:"var(--blue-l)",border:"1px solid var(--blue-b)",borderRadius:8,padding:"10px 13px",marginBottom:16,fontSize:13,color:"var(--blue-d)",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                      <span>🏥 {lang==="ar" ? "المستشفى المختار: " : "Selected hospital: "}
+                        <strong>{lang==="ar" && chosenHospital.nameAr ? chosenHospital.nameAr : chosenHospital.name}</strong>
+                      </span>
+                      <button type="button" onClick={() => setChosenHospital(null)} 
+                        style={{background:"none", border:"1px solid var(--blue)", color:"var(--blue)", padding:"3px 10px", borderRadius:6, fontSize:11, cursor:"pointer"}}>
+                        {lang==="ar"?"إزالة":"Remove"}
+                      </button>
+                    </div>
+                  )}
                   <div className="fgrid">
                     <div className="fg full">
                       <label>{t("patientName")} *</label>
@@ -486,22 +499,22 @@ export default function Landing() {
                     </div>
                     <div className="fg full">
                       <label>
-                      {t("location")} *
-                      {userLocationName && (
-                     <span style={{fontSize:11, color:"var(--blue)", fontWeight:600, marginRight:8, marginLeft:8}}>
-                     💡 {lang==="ar" ? `نقترح: ${userLocationName}` : `Suggested: ${userLocationName}`}
-                        <button 
-                          type="button"
-                          onClick={() => setReqForm(prev => ({...prev, location: userLocationName}))}
-                            style={{
-                              marginLeft:8, marginRight:8, background:"var(--blue)", color:"white",
-                              border:"none", padding:"2px 10px", borderRadius:6, fontSize:11, fontWeight:700,
-                              cursor:"pointer"
-                            }}>
-                          {lang==="ar"?"استخدم":"Use"}
-                       </button>
-                        </span>
-                      )}
+                        {t("location")} *
+                        {userLocationName && (
+                          <span style={{fontSize:11, color:"var(--blue)", fontWeight:600, marginRight:8, marginLeft:8}}>
+                            💡 {lang==="ar" ? `نقترح: ${userLocationName}` : `Suggested: ${userLocationName}`}
+                            <button 
+                              type="button"
+                              onClick={() => setReqForm(prev => ({...prev, location: userLocationName}))}
+                              style={{
+                                marginLeft:8, marginRight:8, background:"var(--blue)", color:"white",
+                                border:"none", padding:"2px 10px", borderRadius:6, fontSize:11, fontWeight:700,
+                                cursor:"pointer"
+                              }}>
+                              {lang==="ar"?"استخدم":"Use"}
+                            </button>
+                          </span>
+                        )}
                       </label>
                       <select name="location" value={reqForm.location} onChange={chReq}>
                         <option value="">{lang==="ar"?"اختر منطقتك...":"Select your region..."}</option>
@@ -517,7 +530,7 @@ export default function Landing() {
                       <textarea name="description" placeholder={t("descPlaceholder")} value={reqForm.description} onChange={chReq}/>
                     </div>
                   </div>
-                  {recommended && (
+                  {recommended && !chosenHospital && (
                     <div className="info-box">
                       <strong>🏥 {t("recommendedHospital")}: </strong>
                       {lang==="ar" && recommended.nameAr ? recommended.nameAr : recommended.name} — {recommended.availableBeds} {t("bedsAvailable")}
