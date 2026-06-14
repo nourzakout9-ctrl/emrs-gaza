@@ -36,9 +36,19 @@ export default function Landing() {
   
   useEffect(() => {
     async function init() {
-      await seedAll();
-      setHospitals(await getHospitals());
-      setSeeding(false);
+      // اجلب المستشفيات فوراً بدون انتظار seedAll
+      const existing = await getHospitals();
+      if (existing.length > 0) {
+        setHospitals(existing);
+        setSeeding(false);
+        // شغّل seedAll في الخلفية للتأكد فقط
+        seedAll().then(() => getHospitals().then(setHospitals));
+      } else {
+        // أول مرة — لا بد ننتظر seedAll
+        await seedAll();
+        setHospitals(await getHospitals());
+        setSeeding(false);
+      }
     }
     init();
   }, []);
